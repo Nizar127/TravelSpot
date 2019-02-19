@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "369905030098",
+    "firebase_url": "https://travelspot-91aa9.firebaseio.com",
+    "project_id": "travelspot-91aa9",
+    "storage_bucket": "travelspot-91aa9.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:369905030098:android:60d04987b08a9999",
+        "android_client_info": {
+          "package_name": "com.travel.travelspot.travelspot"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "369905030098-dvs6c6dbcvp60v3us3kif5cjlo9jq91h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.travel.travelspot.travelspot",
+            "certificate_hash": "2928096f999687040b47b19afc7c4990e3998caf"
+          }
+        },
+        {
+          "client_id": "369905030098-8ob06lo57nogmfn0eu7meem85bgcklk8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnzhQxoP9snvItEsnwzWhRNk9e5TSRe-0"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "369905030098-8ob06lo57nogmfn0eu7meem85bgcklk8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
