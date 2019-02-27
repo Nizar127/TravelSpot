@@ -10,8 +10,13 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
@@ -19,12 +24,17 @@ import com.firebase.geofire.GeoQuery;
 import com.firebase.geofire.GeoQueryEventListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -35,8 +45,12 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.io.ByteArrayInputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+
+import de.hdodenhof.circleimageview.CircleImageView;
 
 public class CustomerMapActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
 
@@ -45,52 +59,147 @@ public class CustomerMapActivity extends FragmentActivity implements OnMapReadyC
     Location mLastLocation;
     LocationRequest mLocationRequest;
 
-    private Button mRequest;
+    private Button mRequest, mSettings;
     private LatLng pickuplocation;
+
+
+    private Boolean requestCancel = false;
+
+    private Marker pickupMarker;
+
+    private LinearLayout mInfoLayout;
+
+    private CircleImageView mProfile;
+
+    private SupportMapFragment mapFragment;
+
+   // private ImageView mTourGuiderProfileImage;
+
+    private TextView mGuiderName, mGuiderPhone, mGuiderCar;
+
+    private String destination;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_driver_map);
+        setContentView(R.layout.activity_customer_map);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(CustomerMapActivity.this, new String[][android.Manifest.permission.ACCESS_FINE_LOCATION], LOCATION_REQUEST_CODE);
+        }else {
+            mapFragment.getMapAsync(this);
+        }
+        //do logout here
+        //better automation
 
-        //for request
+        mInfoLayout = (LinearLayout)findViewById(R.id.guiderInfo);
+        mProfile =(CircleImageView) findViewById(R.id.guiderProfileImage);
+        mGuiderName = (TextView)findViewById(R.id.guiderName);
+        mGuiderPhone = (TextView)findViewById(R.id.guiderPhone);
+        mGuiderCar = (TextView)findViewById(R.id.guiderCar);
+
+
+        //this code below support part of cancelling tour guide
         mRequest = (Button) findViewById(R.id.Request);
+        mSettings = (Button)findViewById(R.id.Settings);
         mRequest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-                //underneath this is create customer request table that request driver based on location
-                DatabaseReference ref = FirebaseDatabase.getInstance().getReference("CustomerRequest");
-                GeoFire geoFire = new GeoFire(ref);
-                //get distance of the driver from onlocatiochanged function
-                geoFire.setLocation(userId, new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
-                String user_Id = FirebaseAuth.getInstance().getCurrentUser().getUid();
-                DatabaseReference refer = FirebaseDatabase.getInstance().getReference("DriverAvailable");
+               if (requestCancel){
+                   //this script will remove all request
+                   requestCancel = false;
+                    geoQuery.removeAllListeners();
+                   guiderLocationRef.removeEventListener(guiderLocationRefListener);
+                   guiderInfoDatabase.removeEventListener(guiderInfoDatabaseListener);
 
-                GeoFire geoFireLocation = new GeoFire(refer);
-                geoFireLocation.setLocation(user_Id, new GeoLocation(mLastLocation.getLatitude(), mLastLocation.getLongitude()));
+                   if(GuiderFoundID != null){
+                       DatabaseReference guiderRef = FirebaseDatabase.getInstance().getReference().child("Customer").child("Guider").child(GuiderFoundID).child("customerRequest");
+                       guiderRef.setValue(true);
+                       GuiderFoundID = null;
+                   }
+                   GuiderFound = false;
+                   radius = 1;
+                   String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-                pickuplocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-                mMap.addMarker(new MarkerOptions().position(pickuplocation).title("Pickup Location"));
+                   DatabaseReference ref= FirebaseDatabase.getInstance().getReference("customerRequest");
+                   GeoFire geoFire = new GeoFire(ref);
+                   geoFire.removeLocation(userId);
 
-                mRequest.setText("Getting Your Tour Guider");
-                //FirebaseAuth.getInstance().signout(); // for logout
+                   if(pickupMarker != null){
+                       pickupMarker.remove();
 
-                //Intent intent = new Intent(CustomerMapActivity.this, TourGuideActivity.class);
-                //startActivity(intent);
-                //finish();
-                //we will do closest driver first, then it will check availability
-                getClosestGuider();
+                   }
+                   if(mGuiderMarker != null){
+                       mGuiderMarker.remove();
+                   }
+                   mRequest.setText("Request Tour Guide");
+                   mInfoLayout.setVisibility(View.GONE);
+               }else{
+                   requestCancel = true;
+                   //if there are not cancel
+                   //run this script which make request
+                   String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                   //underneath this is create customer request table that request driver based on location
+                   DatabaseReference ref = FirebaseDatabase.getInstance().getReference("CustomerRequest");
+                   GeoFire geoFire = new GeoFire(ref);
+                   //get distance of the driver from onlocatiochanged function
+                   geoFire.setLocation(userId, new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+                   String user_Id = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                   DatabaseReference refer = FirebaseDatabase.getInstance().getReference("DriverAvailable");
+                   GeoFire geoFireLocation = new GeoFire(refer);
+                   geoFireLocation.setLocation(user_Id, new GeoLocation(mLastLocation.getLatitude(), mLastLocation.getLongitude()));
+
+                   pickuplocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+                   pickupMarker = mMap.addMarker(new MarkerOptions().position(pickuplocation).title("Pickup Location").icon(BitmapDescriptorFactory.fromResource(R.mipmap.parking_sensor)));
+
+                   mRequest.setText("Getting Your Tour Guider");
+                   //FirebaseAuth.getInstance().signout(); // for logout
+
+                   //Intent intent = new Intent(CustomerMapActivity.this, TourGuideActivity.class);
+                   //startActivity(intent);
+                   //finish();
+                   //we will do closest driver; first, then it will check availability
+                   getClosestGuider();
+               }
             }
         });
+mSettings.setOnClickListener(new View.OnClickListener() {
+    @Override
+    public void onClick(View v) {
+        Intent intent = new Intent(CustomerMapActivity.this, CustomerSettingsActivity.class);
+        startActivity(intent); //no finish
+        return;
+    }
+});
+// Initialize the AutocompleteSupportFragment.
+        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
+                getFragmentManager().findFragmentById(R.id.autocomplete_fragment);
+
+// Set up a PlaceSelectionListener to handle the response.
+        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                // TODO: Get info about the selected place.
+                destination = place.getName().toString();
+
+            }
+
+            @Override
+            public void onError(Status status) {
+                // TODO: Handle the error.
+
+            }
+        });
+
+
     }
     private int radius = 1;
     private Boolean GuiderFound = false;
     private String GuiderFoundID;
+
+    GeoQuery geoQuery;
     private void getClosestGuider() {
         DatabaseReference driverLocation = FirebaseDatabase.getInstance().getReference().child("GuiderAvailable");
 
@@ -102,14 +211,15 @@ public class CustomerMapActivity extends FragmentActivity implements OnMapReadyC
         geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
             @Override
             public void onKeyEntered(String key, GeoLocation location) {
-                if(!GuiderFound){
+                if(!GuiderFound && requestCancel){
 
                     GuiderFound = true;
                     GuiderFoundID = key;
-                    DatabaseReference guiderRef = FirebaseDatabase.getInstance().getReference().child("Customer").child("Guider").child(GuiderFoundID);
+                    DatabaseReference guiderRef = FirebaseDatabase.getInstance().getReference().child("Customer").child("Guider").child(GuiderFoundID).child("customerRequest");
                     String customerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
                     HashMap map = new HashMap();
                     map.put("CustomerRideId", customerId);
+                    map.put("destination", destination);
                     guiderRef.updateChildren(map);
 
                     getGuiderLocation();
@@ -146,12 +256,14 @@ public class CustomerMapActivity extends FragmentActivity implements OnMapReadyC
     }
 
     private Marker mGuiderMarker;
+    private DatabaseReference guiderLocationRef;
+    private ValueEventListener guiderLocationRefListener;
     private void getGuiderLocation() {
-        final DatabaseReference guiderLocationRef = FirebaseDatabase.getInstance().getReference().child("guiderWorking").child(GuiderFoundID).child("1");
+        guiderLocationRef = FirebaseDatabase.getInstance().getReference().child("guiderWorking").child(GuiderFoundID).child("1");
         guiderLocationRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                if(dataSnapshot.exists()){
+                if(dataSnapshot.exists() && requestCancel){
                     List<Object> map = (List<Object>) dataSnapshot.getValue();
                     double locationLat = 0;
                     double locationLng = 0;
@@ -191,7 +303,7 @@ public class CustomerMapActivity extends FragmentActivity implements OnMapReadyC
                     }
                     //mention here
                     mRequest.setText("Driver Found: " + String.valueOf(distance));
-                    mGuiderMarker = mMap.addMarker(new MarkerOptions().position(guiderLatLng).title("Your Tour Guider"));
+                    mGuiderMarker = mMap.addMarker(new MarkerOptions().position(guiderLatLng).title("Your Tour Guider").icon(BitmapDescriptorFactory.fromResource(R.mipmap.van)));
                 }
             }
 
@@ -265,6 +377,23 @@ public class CustomerMapActivity extends FragmentActivity implements OnMapReadyC
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
+    }
+
+    //requesting permission to access GPS location
+    final int LOCATION_REQUEST_CODE = 1;
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case LOCATION_REQUEST_CODE: {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    mapFragment.getMapAsync(this);
+                } else {
+                    Toast.makeText(getApplicationContext(), "Please Provide The Permission To Access Location: ", Toast.LENGTH_LONG).show();
+                }
+                break;
+            }
+        }
     }
 
     @Override

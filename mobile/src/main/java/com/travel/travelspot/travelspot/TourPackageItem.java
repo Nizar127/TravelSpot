@@ -11,11 +11,16 @@ public class TourPackageItem {
     //save tour name description
     private String tourNameDesc;
 
-    public TourPackageItem(String tourName, int tourImageId, String tourNameDesc) {
+    private String packageList;
+
+    public TourPackageItem(String tourName, int tourImageId, String tourNameDesc, String packageList) {
         this.tourName = tourName;
         this.tourImageId = tourImageId;
         this.tourNameDesc = tourNameDesc;
+        this.packageList = packageList;
     }
+
+    public TourPackageItem(){}
 
     public String getTourName() {
         return tourName;
@@ -39,5 +44,13 @@ public class TourPackageItem {
 
     public void setTourNameDesc(String tourNameDesc) {
         this.tourNameDesc = tourNameDesc;
+    }
+
+    public String getPackageList() {
+        return packageList;
+    }
+
+    public void setPackageList(String packageList) {
+        this.packageList = packageList;
     }
 }

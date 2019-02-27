@@ -40,6 +40,9 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key" />
+        <!-- <meta-data -->
+        <!-- android:name="com.google.android.geo.API_KEY" -->
+        <!-- android:value="AIzaSyBCG0RTgLbjMYx9ZEQBjSDlVHJ9kOJ81Qw" /> -->
 
         <activity
             android:name=".DriverMapActivity"
@@ -47,8 +50,14 @@
         <activity android:name=".UserChooseActivity" />
         <activity android:name=".TourPackageActivity" />
         <activity android:name=".TourGuideActivity" />
-        <activity android:name=".CustomerMapActivity" />
-        <activity android:name=".UserProfileActivity"></activity>
+        <activity
+            android:name=".CustomerMapActivity"
+            android:label="Map" />
+        <activity android:name=".UserProfileActivity" />
+        <activity android:name=".CustomerSettingsActivity" />
+        <activity android:name=".DriverSettingsActivity" />
+        <activity android:name=".DraftPlanActivity" />
+        <activity android:name=".PackageListActivity"></activity>
     </application>
 
 </manifest>
